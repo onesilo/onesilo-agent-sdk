@@ -14,9 +14,13 @@
  * authorize request with no scope pairs successfully and then dies silently
  * when the access token expires.
  *
- * DCR metadata: client_name "Buzz Agent (@handle)" and client_uri
- * "https://buzz.xyz" identify the connection as a Buzz agent in the
- * dashboard's connections page.
+ * DCR metadata: the RFC 7591 software_id "com.onesilo.agent" is the formal
+ * agent pairing signal (SILO-116) — the control plane classifies the
+ * resulting connection as an agent (app_type "agent") so it's badged and
+ * governed uniformly with first-party agents. client_name carries the
+ * handle for display. Self-asserted metadata is identification only, never
+ * authorization: capability comes exclusively from the grants the owner
+ * manages in the dashboard.
  */
 
 import { createServer } from "node:http";
@@ -49,6 +53,13 @@ interface StoredCredentials {
 }
 
 export const BUZZ_CLIENT_URI = "https://buzz.xyz";
+
+/**
+ * RFC 7591 software identifier asserted at registration. Recognized by the
+ * control plane as the formal agent classification signal — keep in sync
+ * with AGENT_SOFTWARE_ID in the backend's mcp_oauth_auth.py.
+ */
+export const AGENT_SOFTWARE_ID = "com.onesilo.agent";
 
 function b64url(buf: Buffer): string {
   return buf.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -226,6 +237,7 @@ export class SiloOAuthClient {
         redirect_uris: [this.redirectUri()],
         client_name: `Buzz Agent (@${this.config.agentHandle})`,
         client_uri: BUZZ_CLIENT_URI,
+        software_id: AGENT_SOFTWARE_ID,
       }),
     });
     if (!res.ok) throw new Error(`DCR failed: ${res.status}`);
